@@ -1,11 +1,14 @@
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import TaskItem from "@/components/organisms/TaskItem"
-import Empty from "@/components/ui/Empty"
-import Loading from "@/components/ui/Loading"
-import Error from "@/components/ui/Error"
-import taskService from "@/services/api/taskService"
-import { toast } from "react-toastify"
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "react-toastify";
+import { logout } from "@/store/authSlice";
+import TaskItem from "@/components/organisms/TaskItem";
+import Error from "@/components/ui/Error";
+import Empty from "@/components/ui/Empty";
+import Loading from "@/components/ui/Loading";
+import taskService from "@/services/api/taskService";
 
 const TaskList = ({ 
   searchQuery, 
@@ -14,39 +17,35 @@ const TaskList = ({
   onTaskEdit,
   refresh 
 }) => {
+const navigate = useNavigate()
+  const dispatch = useDispatch()
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-
-  const loadTasks = async () => {
+const loadTasks = async () => {
     try {
       setLoading(true)
       setError(null)
-      await new Promise(resolve => setTimeout(resolve, 300))
       const data = await taskService.getAll()
       setTasks(data)
     } catch (err) {
-      setError(err.message || "Failed to load tasks")
+      if (err.message === 'Not authenticated') {
+        dispatch(logout())
+        navigate('/')
+      } else {
+        setError(err.message || "Failed to load tasks")
+      }
     } finally {
       setLoading(false)
     }
-  }
+}
 
-  useEffect(() => {
+useEffect(() => {
     loadTasks()
   }, [refresh])
-
   const handleToggleComplete = async (taskId) => {
-    try {
-      const task = tasks.find(t => t.Id === taskId)
-      if (!task) return
-
-      const updatedTask = await taskService.update(taskId, {
-        ...task,
-        completed: !task.completed,
-        updatedAt: new Date()
-      })
-
+try {
+      const updatedTask = await taskService.toggleComplete(taskId)
       setTasks(prev => prev.map(t => t.Id === taskId ? updatedTask : t))
       
       toast.success(
@@ -54,11 +53,16 @@ const TaskList = ({
         { position: "top-right" }
       )
     } catch (err) {
-      toast.error("Failed to update task")
+      if (err.message === 'Not authenticated') {
+        dispatch(logout())
+        navigate('/')
+      } else {
+        toast.error(err.message || "Failed to update task")
+      }
     }
   }
 
-  const handleDeleteTask = async (taskId) => {
+const handleDeleteTask = async (taskId) => {
     if (!window.confirm("Are you sure you want to delete this task?")) return
 
     try {
@@ -66,7 +70,12 @@ const TaskList = ({
       setTasks(prev => prev.filter(t => t.Id !== taskId))
       toast.success("Task deleted successfully")
     } catch (err) {
-      toast.error("Failed to delete task")
+      if (err.message === 'Not authenticated') {
+        dispatch(logout())
+        navigate('/')
+      } else {
+        toast.error(err.message || "Failed to delete task")
+      }
     }
   }
 
@@ -123,9 +132,9 @@ const TaskList = ({
             <AnimatePresence>
               {pendingTasks.map((task) => (
                 <TaskItem
-                  key={task.Id}
+key={task.Id}
                   task={task}
-                  onToggleComplete={handleToggleComplete}
+                  onToggleComplete={() => handleToggleComplete(task.Id)}
                   onEdit={onTaskEdit}
                   onDelete={handleDeleteTask}
                 />
@@ -143,10 +152,10 @@ const TaskList = ({
           <div className="space-y-3">
             <AnimatePresence>
               {completedTasks.map((task) => (
-                <TaskItem
+<TaskItem
                   key={task.Id}
                   task={task}
-                  onToggleComplete={handleToggleComplete}
+                  onToggleComplete={() => handleToggleComplete(task.Id)}
                   onEdit={onTaskEdit}
                   onDelete={handleDeleteTask}
                 />

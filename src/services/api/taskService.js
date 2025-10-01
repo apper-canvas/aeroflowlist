@@ -1,67 +1,174 @@
-import mockTasks from "@/services/mockData/tasks.json"
-
-let tasks = [...mockTasks]
+const getAuthToken = () => {
+  return localStorage.getItem('authToken');
+};
 
 const taskService = {
   getAll: async () => {
-    await new Promise(resolve => setTimeout(resolve, 300))
-    return [...tasks].sort((a, b) => {
-      if (a.completed !== b.completed) {
-        return a.completed - b.completed
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const { ApperClient } = window.ApperSDK;
+    const apperClient = new ApperClient({
+      apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+      apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+    });
+
+    const result = await apperClient.functions.invoke(
+      import.meta.env.VITE_TASKS_GET_ALL,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       }
-      return new Date(b.createdAt) - new Date(a.createdAt)
-    })
+    );
+
+    const data = await result.json();
+    
+    if (data.success) {
+      return data.tasks;
+    } else {
+      throw new Error(data.error || 'Failed to fetch tasks');
+    }
   },
 
   getById: async (id) => {
-    await new Promise(resolve => setTimeout(resolve, 200))
-    const task = tasks.find(t => t.Id === id)
+    const tasks = await taskService.getAll();
+    const task = tasks.find(t => t.Id === id);
     if (!task) {
-      throw new Error("Task not found")
+      throw new Error("Task not found");
     }
-    return { ...task }
+    return task;
   },
 
   create: async (taskData) => {
-    await new Promise(resolve => setTimeout(resolve, 400))
-    const newId = Math.max(...tasks.map(t => t.Id), 0) + 1
-    const newTask = {
-      Id: newId,
-      ...taskData,
-      createdAt: new Date(),
-      updatedAt: new Date()
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Not authenticated');
     }
-    tasks.push(newTask)
-    return { ...newTask }
+
+    const { ApperClient } = window.ApperSDK;
+    const apperClient = new ApperClient({
+      apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+      apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+    });
+
+    const result = await apperClient.functions.invoke(
+      import.meta.env.VITE_TASKS_CREATE,
+      {
+        body: JSON.stringify(taskData),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await result.json();
+    
+    if (data.success) {
+      return data.task;
+    } else {
+      throw new Error(data.error || 'Failed to create task');
+    }
   },
 
   update: async (id, updateData) => {
-    await new Promise(resolve => setTimeout(resolve, 300))
-    const taskIndex = tasks.findIndex(t => t.Id === id)
-    if (taskIndex === -1) {
-      throw new Error("Task not found")
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Not authenticated');
     }
+
+    const { ApperClient } = window.ApperSDK;
+    const apperClient = new ApperClient({
+      apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+      apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+    });
+
+    const result = await apperClient.functions.invoke(
+      import.meta.env.VITE_TASKS_UPDATE,
+      {
+        body: JSON.stringify({ taskId: id, updates: updateData }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await result.json();
     
-    tasks[taskIndex] = {
-      ...tasks[taskIndex],
-      ...updateData,
-      Id: id,
-      updatedAt: new Date()
+    if (data.success) {
+      return data.task;
+    } else {
+      throw new Error(data.error || 'Failed to update task');
     }
-    
-    return { ...tasks[taskIndex] }
   },
 
   delete: async (id) => {
-    await new Promise(resolve => setTimeout(resolve, 250))
-    const taskIndex = tasks.findIndex(t => t.Id === id)
-    if (taskIndex === -1) {
-      throw new Error("Task not found")
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Not authenticated');
     }
+
+    const { ApperClient } = window.ApperSDK;
+    const apperClient = new ApperClient({
+      apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+      apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+    });
+
+    const result = await apperClient.functions.invoke(
+      import.meta.env.VITE_TASKS_DELETE,
+      {
+        body: JSON.stringify({ taskId: id }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await result.json();
     
-    tasks.splice(taskIndex, 1)
-    return true
+    if (data.success) {
+      return true;
+    } else {
+      throw new Error(data.error || 'Failed to delete task');
+    }
+  },
+
+  toggleComplete: async (id) => {
+    const token = getAuthToken();
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const { ApperClient } = window.ApperSDK;
+    const apperClient = new ApperClient({
+      apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+      apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+    });
+
+    const result = await apperClient.functions.invoke(
+      import.meta.env.VITE_TASKS_TOGGLE_COMPLETE,
+      {
+        body: JSON.stringify({ taskId: id }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = await result.json();
+    
+    if (data.success) {
+      return data.task;
+    } else {
+      throw new Error(data.error || 'Failed to toggle task completion');
+    }
   }
-}
+};
 
 export default taskService

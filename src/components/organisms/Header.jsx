@@ -5,6 +5,7 @@ import FilterBar from "@/components/molecules/FilterBar"
 import ApperIcon from "@/components/ApperIcon"
 
 const Header = ({ 
+  user,
   onAddTask, 
   onSearch, 
   statusFilter, 
@@ -27,7 +28,7 @@ const Header = ({
   ]
 
   return (
-    <div className="bg-surface border-b border-gray-100">
+<div className="bg-surface border-b border-gray-100">
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 mb-8">
           <motion.div
@@ -39,13 +40,17 @@ const Header = ({
               FlowList
             </h1>
             <p className="text-gray-600">
-              {tasksCount > 0 ? `Managing ${tasksCount} task${tasksCount === 1 ? "" : "s"}` : "Your productivity companion"}
+              {user && (
+                <span className="font-medium">{user.name}'s workspace • </span>
+              )}
+              {tasksCount > 0 ? `${tasksCount} task${tasksCount === 1 ? "" : "s"}` : "Your productivity companion"}
             </p>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
+            className="flex items-center gap-4"
           >
             <Button
               onClick={onAddTask}
@@ -54,6 +59,22 @@ const Header = ({
             >
               <ApperIcon name="Plus" className="w-5 h-5 mr-2" />
               Add Task
+            </Button>
+            <Button
+              onClick={() => {
+                const { logout } = require('@/store/authSlice')
+                const { useDispatch } = require('react-redux')
+                const { useNavigate } = require('react-router-dom')
+                const dispatch = useDispatch()
+                const navigate = useNavigate()
+                dispatch(logout())
+                navigate('/')
+              }}
+              variant="outline"
+              size="lg"
+            >
+              <ApperIcon name="LogOut" className="w-5 h-5 mr-2" />
+              Logout
             </Button>
           </motion.div>
         </div>
